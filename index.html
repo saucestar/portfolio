@@ -299,7 +299,65 @@ function render(){
   });
 }
 render();
+ /* ---------- base de données ---------- */ 
+  <script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyB7vVAiq_vW7xDeNvoHvhAy1b1ChucNKls",
+  authDomain: "amanoportfolio-5fea0.firebaseapp.com",
+  projectId: "amanoportfolio-5fea0",
+  storageBucket: "amanoportfolio-5fea0.firebasestorage.app",
+  messagingSenderId: "639747378685",
+  appId: "1:639747378685:web:e980dbc42a714075a59d94"
+};
+const $=id=>document.getElementById(id);
+const lmsg=t=>{$('lmsg').textContent=t};
+const DOMAINE='@amano-portfolio.app';
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const ref=doc(db,'portfolio','config');
+let timer;
+
+getDoc(ref).then(s=>{if(s.exists()){try{setConfig(JSON.parse(s.data().json))}catch(e){}}}).catch(()=>{});
+onAuthStateChanged(auth,u=>{$('dlogin').hidden=!!u;$('dpanel').hidden=!u;if(u){$('lpw').value=''}});
+
+async function emailDepuis(id){
+  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(id.trim()));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,24)+DOMAINE;
+}
+async function login(){
+  const id=$('lid').value,pw=$('lpw').value;
+  if(!id||!pw){lmsg('Remplis les deux champs.');return}
+  lmsg('Connexion…');
+  try{await signInWithEmailAndPassword(auth,await emailDepuis(id),pw);lmsg('')}
+  catch(e){
+    lmsg(e.code==='auth/too-many-requests'?'Trop de tentatives. Réessaie plus tard.':'Identifiant ou mot de passe incorrect.');
+  }
+}
+$('lgo').addEventListener('click',login);
+['lid','lpw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter')login()}));
+$('dlogout').addEventListener('click',()=>signOut(auth));
+
+window.cloudSave=data=>{
+  if(!auth.currentUser)return;
+  clearTimeout(timer);
+  timer=setTimeout(()=>{
+    setDoc(ref,{json:JSON.stringify(data),maj:Date.now()})
+      .then(()=>msg('Modifications enregistrées en ligne.'))
+      .catch(()=>msg("Échec de l'enregistrement en ligne."));
+  },800);
+};
+</script>
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
 /* ---------- Dashboard ---------- */
 const dl=document.getElementById('dashlist'),dmsg=document.getElementById('dmsg');
 function msg(t){dmsg.textContent=t}
