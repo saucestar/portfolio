@@ -48,6 +48,11 @@ nav a:focus-visible,.btn:focus-visible,button:focus-visible,.card:focus-visible{
 
 .page{display:none}
 .page.on{display:block}
+/* transition entre les onglets : fondu sortant rapide, puis fondu entrant qui remonte un peu */
+.page.out{opacity:0;transition:opacity .16s ease-in}
+.page.in{animation:pageIn .4s ease-out}
+@keyframes pageIn{from{opacity:0;translate:0 14px}}
+@media (prefers-reduced-motion:reduce){.page.out{transition:none}.page.in{animation:none}}
 
 /* accueil */
 .hero{display:block;max-width:680px;margin-top:22px}
@@ -594,10 +599,20 @@ render();
 function setConfig(d){CONFIANCE=d;render()}
 
 const pages=['accueil','apropos','contact','confidentialite'];
+let pageTimer=null;
 function show(h){
   if(!pages.includes(h))h='accueil';
+  const cur=document.querySelector('.page.on');
+  clearTimeout(pageTimer);
+  if(cur&&cur.id!==h&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    cur.classList.add('out');
+    pageTimer=setTimeout(()=>{cur.classList.remove('out');showNow(h)},160);
+  }else showNow(h);
+}
+function showNow(h){
   document.body.dataset.page=h;
-  pages.forEach(id=>document.getElementById(id).classList.toggle('on',id===h));
+  pages.forEach(id=>{const p=document.getElementById(id);p.classList.remove('out');p.classList.toggle('on',id===h);
+    p.classList.remove('in');if(id===h){void p.offsetWidth;p.classList.add('in')}});
   document.querySelectorAll('nav a').forEach(a=>{
     if(a.getAttribute('href')==='#'+h)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
   });
