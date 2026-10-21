@@ -59,6 +59,7 @@ nav a:focus-visible,.btn:focus-visible,button:focus-visible,.card:focus-visible{
 .btn:active{transform:translateY(1px)}
 .bubble{position:fixed;bottom:-120px;border-radius:50%;z-index:0;pointer-events:none;
   background:radial-gradient(circle at 30% 25%,#fff 0 8%,#ffffff33 30%,#ffffff10 62%,#ffffff66);border:1px solid #ffffffaa;animation:rise linear infinite}
+main.wrap,footer{position:relative;z-index:1} /* le contenu passe devant les bulles */
 @keyframes rise{to{transform:translateY(-130vh) translateX(30px)}}
 .strip{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
 .chip{padding:6px 14px;border-radius:999px;background:var(--glass-b);border:1px solid #9cc4f0;font-weight:700;font-size:.9rem}
