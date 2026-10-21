@@ -571,8 +571,9 @@ function ytOK(){return ytChoix()==='1'}
 function ytSet(v){try{localStorage.setItem('sauce_yt',v)}catch(e){}document.getElementById('consent').hidden=true;render()}
 
 /* ---------- « Voir plus » : les vidéos de la playlist « Mes productions » ---------- */
-// [id YouTube, format (h = horizontal, v = Short vertical), @chaîne, nom, titre]
-const PLAYLIST=[
+// La liste vient de playlist.json, mis à jour automatiquement toutes les 3 h par une GitHub Action
+// (.github/workflows/playlist.yml). Celle-ci ne sert que si le fichier est inaccessible.
+let PLAYLIST=[
   ['qQBQDdZTW0g','h','alkoryt','Alkor',"Quelles sont LES PIRES ARMURES D'IRON MAN ?"],
   ['BJhgOyzQ4m4','v','alkoryt','Alkor','IRON MAN N’aurait JAMAIS DÛ PERDRE contre CAPTAIN AMERICA !'],
   ['4ZptQ5kSQP8','h','cl3o_skibidi','cl3o','Que Deviennent les Élèves de la Classe 3-E à la Fin de Assassination Classroom ?'],
@@ -583,7 +584,12 @@ const PLAYLIST=[
   ['p347kfPqDGE','v','alkoryt','Alkor','QUI FAIT PARTIE du BIG 3 de MARVEL ?'],
   ['BiXZxhx_buU','v','Mangalkor','Mangalkor','Pourquoi MIRAI GOHAN est AUSSI FAIBLE ?'],
   ['A2C4F5FmtAM','v','Mangalkor','Mangalkor','EST-CE que BARDOCK aurait pu BATTRE FREEZER s’il avait eu le SUPER SAIYAN ?']
-];
+].map(([id,format,h,nom,titre])=>({id,format,chaine:'https://www.youtube.com/@'+h,nom,titre}));
+let PL_AVATARS={},plCharge=null;
+function chargerPlaylist(){
+  return plCharge=plCharge||fetch('playlist.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null)
+    .then(d=>{if(d&&Array.isArray(d.videos)&&d.videos.length){PLAYLIST=d.videos;PL_AVATARS=d.avatars||{}}}).catch(()=>{});
+}
 let moreOuvert=false;
 function vignette(btn,id,vert){
   if(!ytOK()){btn.innerHTML='<span class="vtxt">Vidéo YouTube<small>Clique sur ▶ pour la charger.<br>YouTube pourra alors déposer des cookies.</small></span>';return}
@@ -598,10 +604,10 @@ function buildMore(){
   wmpPlayers.forEach((e,f)=>{if(H.contains(f)||G.contains(f))wmpPlayers.delete(f)});
   H.innerHTML='';G.innerHTML='';
   const deja=new Set(CONFIANCE.map(c=>ytId(c.lien)).filter(Boolean)); // pas de doublon avec l'accueil
-  PLAYLIST.forEach(([id,fmt,handle,nom,titre])=>{
-    if(deja.has(id))return;
-    const vert=fmt==='v',chaine='https://www.youtube.com/@'+handle;
-    const c=CONFIANCE.find(x=>(x.chaine||'').toLowerCase()===chaine.toLowerCase())||{};
+  PLAYLIST.forEach(({id,format,chaine,nom,titre})=>{
+    if(!id||deja.has(id))return;
+    const vert=format==='v',handle=(chaine||'').split('@')[1]||'';
+    const c=CONFIANCE.find(x=>(x.chaine||'').toLowerCase()===(chaine||'').toLowerCase())||{avatar:PL_AVATARS[handle]};
     const d=document.createElement('div');d.className='vid'+(vert?' vert':'');
     d.innerHTML='<div class="avwrap"></div><div class="vt"><span></span></div><div class="wmp"><div class="vf"></div></div><a class="vtitle" target="_blank" rel="noopener"></a>';
     const av=d.querySelector('.avwrap');
@@ -781,7 +787,7 @@ if(ytChoix()===null)document.getElementById('consent').hidden=false;
 const voirplus=document.getElementById('voirplus'),more=document.getElementById('more');
 voirplus.addEventListener('click',()=>{
   moreOuvert=more.hidden;
-  if(moreOuvert)buildMore();
+  if(moreOuvert){buildMore();chargerPlaylist().then(()=>{if(moreOuvert)buildMore()})}
   else{const H=document.getElementById('more-h'),G=document.getElementById('more-grid');
     wmpPlayers.forEach((e,f)=>{if(H.contains(f)||G.contains(f))wmpPlayers.delete(f)});H.innerHTML='';G.innerHTML=''}
   more.hidden=!moreOuvert;

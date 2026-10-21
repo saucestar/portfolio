@@ -1,0 +1,47 @@
+name: Mise à jour de la playlist
+
+# Relit la playlist YouTube « Mes productions » et met à jour playlist.json,
+# que le site charge quand on clique sur « Voir plus ».
+on:
+  schedule:
+    - cron: '17 */3 * * *'   # toutes les 3 heures
+  workflow_dispatch:          # bouton « Run workflow » dans l'onglet Actions de GitHub
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/playlist.py'
+      - '.github/workflows/playlist.yml'
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: playlist
+  cancel-in-progress: false
+
+jobs:
+  maj:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lit la playlist YouTube
+        run: python3 .github/scripts/playlist.py
+
+      - name: Enregistre playlist.json s'il a changé
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet -- playlist.json; then
+            echo "Playlist inchangée, rien à publier."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add playlist.json
+          git commit -m "Met à jour la playlist"
+          git push
+          # relance la publication GitHub Pages (un commit du bot ne la déclenche pas toujours)
+          curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages/builds" || true
