@@ -346,6 +346,7 @@ function render(){
   renderMarquee();
   vg.innerHTML='';const cartes=[];
   CONFIANCE.forEach(c=>{
+    if(!(c.lien||"").trim())return; // pas de lien vidéo = pas de carte vidéo (la chaîne reste dans le bandeau)
     const lien=c.lien||c.chaine,id=c.lien?ytId(c.lien):null;
     const d=document.createElement('div');
     const vert=c.format==='v'||(c.format!=='h'&&/\/shorts\//.test(c.lien||''));
