@@ -15,7 +15,7 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;font-family:'Quicksand','Trebuchet MS',sans-serif;font-weight:500;color:var(--ink);
-  background:#6fb6f2;min-height:100vh;transition:background-color .4s}
+  background:#4169e1;min-height:100vh;transition:background-color .4s}
 h1,h2,h3{font-family:'Orbitron','Trebuchet MS',sans-serif;margin:0;letter-spacing:.02em}
 a{color:inherit}
 .wrap{max-width:1040px;margin:0 auto;padding:16px}
@@ -215,6 +215,11 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 /* ---------- performances ---------- */
 /* fond : grandes étoiles qui tournent sur elles-mêmes */
 .stars{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+/* damier bleu roi qui défile en diagonale à l'infini (comme background-damier.mp4) */
+.damier{--s:clamp(80px,9.5vw,200px);--c1:#5a80f0;--c2:#2f55d0;position:absolute;left:calc(-2*var(--s));top:0;right:0;bottom:calc(-2*var(--s));
+  background:repeating-conic-gradient(var(--c1) 0 25%,var(--c2) 0 50%) 0 0/calc(2*var(--s)) calc(2*var(--s));animation:damier 3.8s linear infinite;will-change:transform}
+@keyframes damier{to{transform:translate(calc(2*var(--s)),calc(-2*var(--s)))}}
+@media (prefers-reduced-motion:reduce){.damier{animation:none}}
 .stars svg{position:absolute;aspect-ratio:1;fill:#ececf0;animation:spin 45s linear infinite;will-change:transform}
 .stars .s1{width:80vmax;left:-32vmax;top:-36vmax}
 .stars .s2{width:72vmax;right:-30vmax;bottom:-32vmax;animation-duration:52s}
@@ -241,7 +246,7 @@ if(lite)document.documentElement.classList.add('lite')})();
 </script>
 </head>
 <body data-page="dashboard">
-<div class="stars" aria-hidden="true"><svg class="s1" viewBox="-100 -100 200 200"><polygon points="0.0,-100.0 24.7,-34.0 95.1,-30.9 39.9,13.0 58.8,80.9 0.0,42.0 -58.8,80.9 -39.9,13.0 -95.1,-30.9 -24.7,-34.0"/></svg><svg class="s2" viewBox="-100 -100 200 200"><polygon points="0.0,-100.0 24.7,-34.0 95.1,-30.9 39.9,13.0 58.8,80.9 0.0,42.0 -58.8,80.9 -39.9,13.0 -95.1,-30.9 -24.7,-34.0"/></svg></div>
+<div class="stars" aria-hidden="true"><div class="damier"></div><svg class="s1" viewBox="-100 -100 200 200"><polygon points="0.0,-100.0 24.7,-34.0 95.1,-30.9 39.9,13.0 58.8,80.9 0.0,42.0 -58.8,80.9 -39.9,13.0 -95.1,-30.9 -24.7,-34.0"/></svg><svg class="s2" viewBox="-100 -100 200 200"><polygon points="0.0,-100.0 24.7,-34.0 95.1,-30.9 39.9,13.0 58.8,80.9 0.0,42.0 -58.8,80.9 -39.9,13.0 -95.1,-30.9 -24.7,-34.0"/></svg></div>
 
 <header class="bar">
   <span class="orb" aria-hidden="true"></span>
