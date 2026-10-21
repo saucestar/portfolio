@@ -300,8 +300,9 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 .voirplus:hover,.voirplus:focus-visible{text-shadow:0 1px 2px #050a3a,0 0 20px #bfe6ff,0 0 6px #fff;outline:none}
 .more{margin-top:30px}
 .more h2{font-size:clamp(1.3rem,3.5vw,1.8rem);color:#fff;text-shadow:0 2px 0 #0b1240,0 0 14px #050a3a99;margin-bottom:12px}
-.more-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:44px 26px;padding:34px 0 10px}
-.more-grid .vid:nth-child(n){width:100%;transform:none}
+.more-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:44px 26px;padding:34px 0 10px}
+#more-h .vid:nth-child(n){align-self:center}
+.more-grid .vid:nth-child(n){width:clamp(150px,calc(50% - 13px),220px);transform:none}
 .more-grid .vid:nth-child(n) .avwrap{left:-10px;right:auto;top:-24px}
 .more-grid .av{width:58px;height:58px;border-width:3px}
 .more-grid .vid:nth-child(n) .vt{padding:2px 4px 8px 54px}
