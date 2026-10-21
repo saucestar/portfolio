@@ -173,6 +173,18 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
   .chrome .in{grid-template-columns:1fr;justify-items:center}.chrome .txt{width:100%}
 }
 @media (prefers-reduced-motion:reduce){.bubble{animation:none;display:none}}
+/* bandeau des clients qui défile */
+.marquee{position:relative;overflow:hidden;padding:12px 0 8px;margin-bottom:4px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.mq-track{display:flex;width:max-content;will-change:transform}
+.mq-set{display:flex;gap:26px;padding-right:26px}
+.mq-item{display:flex;flex-direction:column;align-items:center;gap:6px;width:100px;text-decoration:none;color:#000;font-weight:700;font-size:.85rem;text-align:center}
+.mq-item .av{width:80px;height:80px;transition:transform .25s}
+.mq-item:hover .av,.mq-item:focus-visible .av{transform:scale(1.1)}
+.mq-item .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 0 #fff,0 0 8px #fff}
+.mq-item:focus-visible{outline:3px solid #ffd23d;outline-offset:2px;border-radius:12px}
+@media (max-width:700px){.mq-item{width:84px}.mq-item .av{width:66px;height:66px}}
+@media (prefers-reduced-motion:reduce){.marquee{overflow-x:auto}}
 </style>
 </head>
 <body data-page="accueil">
@@ -207,6 +219,7 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 
   <div class="latest">
     <h2>Ils m'ont fait confiance :</h2>
+    <div class="marquee" id="mq" role="region" aria-label="Chaînes avec qui j'ai travaillé"><div class="mq-track"></div></div>
     <div class="vgrid" id="vgrid"></div>
   </div>
   
@@ -271,7 +284,66 @@ let CONFIANCE=JSON.parse(cfgEl.textContent);
 const EMBED=true; // true = lecteur YouTube intégré (marche si le site est hébergé hors claude.ai)
 function ytId(u){const m=(u||'').match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:null}
 const vg=document.getElementById('vgrid');
+
+/* ---------- Bandeau des clients ---------- */
+const mq=document.getElementById('mq'),mqTrack=mq.querySelector('.mq-track');
+const MQ_VITE=45,MQ_LENT=10; // vitesse en pixels par seconde (normal / souris dessus)
+const mqReduce=matchMedia('(prefers-reduced-motion: reduce)');
+let mqX=0,mqW=0,mqV=MQ_VITE,mqLent=false,mqLast=0;
+function mqItem(c){
+  const a=document.createElement('a');a.className='mq-item';a.href=c.chaine||'#';a.target='_blank';a.rel='noopener';
+  a.setAttribute('aria-label','Chaîne YouTube de '+(c.nom||'?'));
+  if(c.avatar){const i=document.createElement('img');i.className='av';i.src=c.avatar;i.alt='';i.draggable=false;a.appendChild(i)}
+  else{const p=document.createElement('span');p.className='av ph';p.textContent=(c.nom||'?').charAt(0).toUpperCase();a.appendChild(p)}
+  const n=document.createElement('span');n.className='nm';n.textContent=c.nom||'';a.appendChild(n);
+  return a;
+}
+function renderMarquee(){
+  mqTrack.innerHTML='';mqW=0;
+  const list=CONFIANCE.filter(c=>c.nom||c.avatar);
+  mq.hidden=!list.length;
+  if(!list.length)return;
+  const s=document.createElement('div');s.className='mq-set';
+  list.forEach(c=>s.appendChild(mqItem(c)));
+  mqTrack.appendChild(s);
+  mqFill();
+}
+// copie la liste assez de fois pour remplir la largeur et boucler sans trou
+function mqFill(){
+  const first=mqTrack.firstElementChild;if(!first)return;
+  while(mqTrack.children.length>1)mqTrack.lastChild.remove();
+  mqW=first.offsetWidth;
+  if(!mqW||mqReduce.matches){mqTrack.style.transform='';return}
+  const n=Math.ceil(mq.clientWidth/mqW)+1;
+  for(let i=0;i<n;i++){
+    const s=first.cloneNode(true);s.setAttribute('aria-hidden','true');
+    s.querySelectorAll('a').forEach(a=>a.tabIndex=-1);
+    mqTrack.appendChild(s);
+  }
+  mqX%=mqW;
+}
+function mqTick(t){
+  const dt=mqLast?Math.min((t-mqLast)/1000,.1):0;mqLast=t;
+  if(!mqReduce.matches&&mq.offsetParent!==null){
+    if(!mqW)mqFill();
+    if(mqW){
+      mqV+=((mqLent?MQ_LENT:MQ_VITE)-mqV)*Math.min(1,dt*5); // ralentit en douceur
+      mqX=(mqX+mqV*dt)%mqW;
+      mqTrack.style.transform='translateX('+(-mqX)+'px)';
+    }
+  }
+  requestAnimationFrame(mqTick);
+}
+mq.addEventListener('mouseenter',()=>mqLent=true);
+mq.addEventListener('mouseleave',()=>mqLent=false);
+mq.addEventListener('focusin',()=>mqLent=true);
+mq.addEventListener('focusout',()=>mqLent=false);
+addEventListener('resize',()=>{mqW=0});
+mqReduce.addEventListener('change',()=>{mqW=0;mqFill()});
+requestAnimationFrame(mqTick);
+
 function render(){
+  renderMarquee();
   vg.innerHTML='';const cartes=[];
   CONFIANCE.forEach(c=>{
     const lien=c.lien||c.chaine,id=c.lien?ytId(c.lien):null;
