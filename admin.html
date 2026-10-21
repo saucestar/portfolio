@@ -196,6 +196,22 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 .vid .wmp .vf{position:absolute;aspect-ratio:auto;border-radius:0;
   left:calc(7/1536*100%);top:calc(131/1138*100%);width:calc(1521/1536*100%);height:calc(856/1138*100%)}
 .vid.vert .wmp .vf{left:calc(7/900*100%);top:calc(131/1855*100%);width:calc(885/900*100%);height:calc(1573/1855*100%)}
+/* boutons du lecteur (zones cliquables posées sur l'image du cadre, positions en pixels de l'image) */
+.vid .wmp{--w:1536;--h:1138;--px:765;--py:1068;--sx:482;--sy:1068}
+.vid.vert .wmp{--w:900;--h:1855;--px:451;--py:1785;--sx:168;--sy:1785}
+.wmp-btn{position:absolute;z-index:2;padding:0;border:0;background:transparent;cursor:pointer;aspect-ratio:1;
+  transform:translate(-50%,-50%);transition:box-shadow .2s,transform .1s}
+.wmp-play{left:calc(var(--px)/var(--w)*100%);top:calc(var(--py)/var(--h)*100%);width:calc(104/var(--w)*100%);border-radius:50%}
+.wmp-stop{left:calc(var(--sx)/var(--w)*100%);top:calc(var(--sy)/var(--h)*100%);width:calc(52/var(--w)*100%);border-radius:6px}
+.wmp-btn:hover,.wmp-btn:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff66,0 0 18px 5px #7fc4ffcc}
+.wmp-btn:active{transform:translate(-50%,-50%) scale(.93)}
+.wmp[data-etat="arret"] .wmp-stop{cursor:default;box-shadow:none}
+/* pendant la lecture, le bouton play devient pause */
+.wmp[data-etat="lecture"] .wmp-play{background:radial-gradient(circle at 50% 28%,#7a808b,#2b2e35 52%,#0c0d11);box-shadow:inset 0 0 0 2px #a9b2bf,0 0 12px #7fc4ff99}
+.wmp[data-etat="lecture"] .wmp-play::before,.wmp[data-etat="lecture"] .wmp-play::after{content:'';position:absolute;top:30%;width:13%;height:40%;border-radius:2px;background:linear-gradient(#fff,#c4ccd8)}
+.wmp[data-etat="lecture"] .wmp-play::before{left:33%}
+.wmp[data-etat="lecture"] .wmp-play::after{right:33%}
+.vthumb{cursor:pointer}
 </style>
 </head>
 <body data-page="dashboard">
@@ -386,8 +402,47 @@ addEventListener('resize',()=>{mqW=0});
 mqReduce.addEventListener('change',()=>{mqW=0;mqFill()});
 requestAnimationFrame(mqTick);
 
+/* ---------- Boutons du lecteur Windows Media Player ---------- */
+const wmpPlayers=new Map(); // iframe -> fonction qui met à jour l'état du lecteur
+function ytCmd(f,func){try{f.contentWindow.postMessage(JSON.stringify({event:'command',func,args:[]}),'*')}catch(e){}}
+function wmpControls(wmp,vf,thumb,id,nom){
+  const play=document.createElement('button'),stop=document.createElement('button');
+  play.type=stop.type='button';play.className='wmp-btn wmp-play';stop.className='wmp-btn wmp-stop';
+  stop.setAttribute('aria-label','Arrêter la vidéo de '+nom);
+  wmp.append(play,stop);
+  let f=null;
+  function etat(s){wmp.dataset.etat=s;play.setAttribute('aria-label',(s==='lecture'?'Mettre en pause':'Lire')+' la vidéo de '+nom)}
+  etat('arret');
+  function start(){
+    wmpPlayers.forEach((e,autre)=>{ytCmd(autre,'pauseVideo');e('pause')}); // une seule vidéo à la fois
+    f=document.createElement('iframe');
+    f.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&enablejsapi=1&origin='+encodeURIComponent(location.origin);
+    f.title='Vidéo pour '+nom;f.allowFullscreen=true;
+    f.allow='autoplay; accelerometer; encrypted-media; picture-in-picture';f.style.cssText='width:100%;height:100%;border:0';
+    const ff=f;f.addEventListener('load',()=>{try{ff.contentWindow.postMessage(JSON.stringify({event:'listening',id}),'*')}catch(e){}});
+    vf.innerHTML='';vf.appendChild(f);
+    wmpPlayers.set(f,etat);etat('lecture');
+  }
+  play.addEventListener('click',()=>{
+    if(!f)return start();
+    if(wmp.dataset.etat==='lecture'){ytCmd(f,'pauseVideo');etat('pause')}
+    else{wmpPlayers.forEach((e,autre)=>{if(autre!==f){ytCmd(autre,'pauseVideo');e('pause')}});ytCmd(f,'playVideo');etat('lecture')}
+  });
+  stop.addEventListener('click',()=>{if(!f)return;wmpPlayers.delete(f);f=null;vf.innerHTML='';vf.appendChild(thumb);etat('arret')});
+  thumb.addEventListener('click',start);
+}
+// YouTube prévient quand la vidéo est mise en pause ou relancée depuis le lecteur lui-même
+addEventListener('message',e=>{
+  if(!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin))return;
+  let d;try{d=typeof e.data==='string'?JSON.parse(e.data):e.data}catch(err){return}
+  const st=d&&d.event==='onStateChange'?d.info:(d&&d.info&&typeof d.info==='object'?d.info.playerState:undefined);
+  if(typeof st!=='number')return;
+  wmpPlayers.forEach((etat,f)=>{if(f.contentWindow===e.source)etat(st===1||st===3?'lecture':'pause')});
+});
+
 function render(){
   renderMarquee();
+  wmpPlayers.clear();
   vg.innerHTML='';const cartes=[];
   CONFIANCE.forEach(c=>{
     if(!(c.lien||"").trim())return; // pas de lien vidéo = pas de carte vidéo (la chaîne reste dans le bandeau)
@@ -409,12 +464,8 @@ function render(){
         im.onload=()=>{if(im.naturalWidth>200||i===q.length-1)btn.style.backgroundImage='url('+im.src+')';else essai(i+1)};
         im.onerror=()=>{if(i<q.length-1)essai(i+1)};
         im.src='https://i.ytimg.com/vi/'+id+'/'+q[i]+'.jpg'})(0);
-      btn.innerHTML='<span class="play">▶</span>';
-      btn.addEventListener('click',()=>{
-        const f=document.createElement('iframe');f.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1';f.title='Vidéo pour '+c.nom;f.allowFullscreen=true;
-        f.allow='autoplay; accelerometer; encrypted-media; picture-in-picture';f.style.cssText='width:100%;height:100%;border:0';
-        vf.innerHTML='';vf.appendChild(f)});
-      vf.appendChild(btn)}
+      vf.appendChild(btn);
+      wmpControls(d.querySelector('.wmp'),vf,btn,id,c.nom)}
     else{const a=document.createElement('a');a.className='vcover';a.target='_blank';a.rel='noopener';a.href=lien;
       a.innerHTML='<span class="play">▶</span><span class="vtxt"></span>';
       a.querySelector('.vtxt').innerHTML=(c.lien?'':'Vidéo à venir<br>')+'<small>Ouvrir sur YouTube</small>';vf.appendChild(a)}
