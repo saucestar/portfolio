@@ -297,6 +297,21 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 .legal h3{font-size:1rem;margin:18px 0 6px}
 .legal p,.legal li{line-height:1.55;margin:0 0 8px}
 .legal ul{padding-left:20px;margin:0 0 8px}
+/* « Voir plus » : les autres vidéos de la playlist */
+.voirplus-wrap{text-align:center;margin:34px 0 8px}
+.voirplus{font:400 1.05rem 'Silkscreen',monospace;letter-spacing:.06em;text-transform:uppercase;color:#fff;text-underline-offset:6px;
+  text-shadow:0 1px 2px #050a3a,0 0 12px #7fc4ff;transition:text-shadow .2s}
+.voirplus:hover,.voirplus:focus-visible{text-shadow:0 1px 2px #050a3a,0 0 20px #bfe6ff,0 0 6px #fff;outline:none}
+.more{margin-top:30px}
+.more h2{font-size:clamp(1.3rem,3.5vw,1.8rem);color:#fff;text-shadow:0 2px 0 #0b1240,0 0 14px #050a3a99;margin-bottom:12px}
+.more-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:44px 26px;padding:34px 0 10px}
+.more-grid .vid:nth-child(n){width:100%;transform:none}
+.more-grid .vid:nth-child(n) .avwrap{left:-10px;right:auto;top:-24px}
+.more-grid .av{width:58px;height:58px;border-width:3px}
+.more-grid .vid:nth-child(n) .vt{padding:2px 4px 8px 54px}
+.vtitle{display:block;margin:10px 2px 0;font-weight:700;font-size:.85rem;line-height:1.35;color:#fff;text-decoration:none;
+  text-shadow:0 1px 2px #050a3a,0 0 8px #050a3a}
+.vtitle:hover{text-decoration:underline}
 </style>
 <script>
 /* Mode léger : si le navigateur dessine sans carte graphique (WebGL absent ou logiciel),
@@ -343,6 +358,12 @@ if(lite)document.documentElement.classList.add('lite')})();
   <div class="latest">
     <h2>Ils m'ont fait confiance :</h2>
     <div class="vgrid" id="vgrid"></div>
+    <div class="more" id="more" hidden>
+      <h2>Encore plus de montages :</h2>
+      <div class="vgrid" id="more-h"></div>
+      <div class="more-grid" id="more-grid"></div>
+    </div>
+    <p class="voirplus-wrap"><button class="voirplus lnk" type="button" id="voirplus" aria-expanded="false" aria-controls="more">Voir plus ▾</button></p>
   </div>
   
 </section>
@@ -546,6 +567,54 @@ function ytChoix(){try{return localStorage.getItem('sauce_yt')}catch(e){return n
 function ytOK(){return ytChoix()==='1'}
 function ytSet(v){try{localStorage.setItem('sauce_yt',v)}catch(e){}document.getElementById('consent').hidden=true;render()}
 
+/* ---------- « Voir plus » : les vidéos de la playlist « Mes productions » ---------- */
+// [id YouTube, format (h = horizontal, v = Short vertical), @chaîne, nom, titre]
+const PLAYLIST=[
+  ['qQBQDdZTW0g','h','alkoryt','Alkor',"Quelles sont LES PIRES ARMURES D'IRON MAN ?"],
+  ['BJhgOyzQ4m4','v','alkoryt','Alkor','IRON MAN N’aurait JAMAIS DÛ PERDRE contre CAPTAIN AMERICA !'],
+  ['4ZptQ5kSQP8','h','cl3o_skibidi','cl3o','Que Deviennent les Élèves de la Classe 3-E à la Fin de Assassination Classroom ?'],
+  ['fg4RpPx7n0w','v','alkoryt','Alkor','La VRAIE PUISSANCE de WOLVERINE !'],
+  ['3XPb5Dg_fm4','v','Mangalkor','Mangalkor','Qui est LE HÉROS le PLUS FORT des ANIMES (à l’épisode 1)'],
+  ['lkvZyYgRle4','v','alkoryt','Alkor','Est-ce que TOUS les VILAINS du MCU pourraient BATTRE THANOS ?'],
+  ['05v9iZDl5PU','h','alkoryt','Alkor','6 VILLES les plus HORRIBLES des JEUX VIDEO ! (0,1% de chance de SURVIE)'],
+  ['p347kfPqDGE','v','alkoryt','Alkor','QUI FAIT PARTIE du BIG 3 de MARVEL ?'],
+  ['BiXZxhx_buU','v','Mangalkor','Mangalkor','Pourquoi MIRAI GOHAN est AUSSI FAIBLE ?'],
+  ['A2C4F5FmtAM','v','Mangalkor','Mangalkor','EST-CE que BARDOCK aurait pu BATTRE FREEZER s’il avait eu le SUPER SAIYAN ?']
+];
+let moreOuvert=false;
+function vignette(btn,id,vert){
+  if(!ytOK()){btn.innerHTML='<span class="vtxt">Vidéo YouTube<small>Clique sur ▶ pour la charger.<br>YouTube pourra alors déposer des cookies.</small></span>';return}
+  const q=vert?['oardefault','maxresdefault','hqdefault']:['maxresdefault','sddefault','hqdefault'];
+  (function essai(i){const im=new Image();
+    im.onload=()=>{if(im.naturalWidth>200||i===q.length-1)btn.style.backgroundImage='url('+im.src+')';else essai(i+1)};
+    im.onerror=()=>{if(i<q.length-1)essai(i+1)};
+    im.src='https://i.ytimg.com/vi/'+id+'/'+q[i]+'.jpg'})(0);
+}
+function buildMore(){
+  const H=document.getElementById('more-h'),G=document.getElementById('more-grid');
+  wmpPlayers.forEach((e,f)=>{if(H.contains(f)||G.contains(f))wmpPlayers.delete(f)});
+  H.innerHTML='';G.innerHTML='';
+  const deja=new Set(CONFIANCE.map(c=>ytId(c.lien)).filter(Boolean)); // pas de doublon avec l'accueil
+  PLAYLIST.forEach(([id,fmt,handle,nom,titre])=>{
+    if(deja.has(id))return;
+    const vert=fmt==='v',chaine='https://www.youtube.com/@'+handle;
+    const c=CONFIANCE.find(x=>(x.chaine||'').toLowerCase()===chaine.toLowerCase())||{};
+    const d=document.createElement('div');d.className='vid'+(vert?' vert':'');
+    d.innerHTML='<div class="avwrap"></div><div class="vt"><span></span></div><div class="wmp"><div class="vf"></div></div><a class="vtitle" target="_blank" rel="noopener"></a>';
+    const av=d.querySelector('.avwrap');
+    if(c.avatar){const i=document.createElement('img');i.className='av';i.src=c.avatar;i.alt='Photo de profil de '+nom;av.appendChild(i)}
+    else{const p=document.createElement('span');p.className='av ph';p.textContent=nom.charAt(0).toUpperCase();av.appendChild(p)}
+    d.querySelector('.vt span').textContent=nom;
+    const a=d.querySelector('.vtitle');a.textContent=titre;a.href=(vert?'https://www.youtube.com/shorts/':'https://youtu.be/')+id;
+    const vf=d.querySelector('.vf'),btn=document.createElement('button');
+    btn.type='button';btn.className='vcover vthumb';btn.setAttribute('aria-label','Lire « '+titre+' »');
+    btn.style.cssText='border:0;cursor:pointer;font:inherit;background:#06103a center/cover no-repeat';
+    vignette(btn,id,vert);vf.appendChild(btn);
+    wmpControls(d.querySelector('.wmp'),vf,btn,id,nom);
+    (vert?G:H).appendChild(d);pop(d);
+  });
+}
+
 function render(){
   renderMarquee();
   wmpPlayers.clear();
@@ -584,6 +653,7 @@ function render(){
     else{vg.appendChild(a.d);i++}
   }
   vg.querySelectorAll('.vid').forEach(pop);
+  if(moreOuvert)buildMore();
 }
 
 /* ---------- Apparition « pop » au défilement ---------- */
@@ -654,6 +724,16 @@ document.getElementById('yt-oui').addEventListener('click',()=>ytSet('1'));
 document.getElementById('yt-non').addEventListener('click',()=>ytSet('0'));
 document.getElementById('cookies').addEventListener('click',()=>{document.getElementById('consent').hidden=false});
 if(ytChoix()===null)document.getElementById('consent').hidden=false;
+const voirplus=document.getElementById('voirplus'),more=document.getElementById('more');
+voirplus.addEventListener('click',()=>{
+  moreOuvert=more.hidden;
+  if(moreOuvert)buildMore();
+  else{const H=document.getElementById('more-h'),G=document.getElementById('more-grid');
+    wmpPlayers.forEach((e,f)=>{if(H.contains(f)||G.contains(f))wmpPlayers.delete(f)});H.innerHTML='';G.innerHTML=''}
+  more.hidden=!moreOuvert;
+  voirplus.textContent=moreOuvert?'Voir moins ▴':'Voir plus ▾';
+  voirplus.setAttribute('aria-expanded',moreOuvert);
+});
 </script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
