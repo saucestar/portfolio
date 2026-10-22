@@ -657,7 +657,7 @@ function buildMore(){
 // Les navigateurs bloquent le son tant que le visiteur n'a pas cliqué ou appuyé sur une touche :
 // la musique démarre donc à sa première interaction. Elle se coupe pendant qu'une vidéo joue.
 var son=null,sonVoulu=true,sonBloque=false,sonAnim=null;
-const SON_VOLUME=.3;
+const SON_VOLUME=.15; // musique de fond : volume bas
 function sonFondu(cible,fin){
   clearInterval(sonAnim);
   sonAnim=setInterval(()=>{
@@ -818,9 +818,9 @@ document.getElementById('son').addEventListener('click',()=>{
 // premier geste du visiteur (hors bouton son) : on peut enfin lancer la musique
 function sonGeste(e){
   if(e.target.closest&&e.target.closest('#son'))return;
-  ['pointerdown','keydown'].forEach(t=>removeEventListener(t,sonGeste,true));sonMaj();
+  ['pointerdown','touchend','click','keydown'].forEach(t=>removeEventListener(t,sonGeste,true));sonMaj();
 }
-['pointerdown','keydown'].forEach(t=>addEventListener(t,sonGeste,true));
+['pointerdown','touchend','click','keydown'].forEach(t=>addEventListener(t,sonGeste,true));
 document.addEventListener('visibilitychange',sonMaj);
 sonMaj();
 </script>
