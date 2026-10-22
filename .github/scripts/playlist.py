@@ -69,6 +69,12 @@ def videos_de_la_playlist():
         out.append({'id': vid, 'titre': meta.get('title', {}).get('content', ''), 'nom': next((n for n in noms if n), ''), 'handle': chaine_de(v)})
     return out
 
+def auteur(vid):
+    """Chaîne (@handle) et nom de l'auteur d'une vidéo, via l'oEmbed public de YouTube."""
+    d = json.loads(lire(f'https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={vid}&format=json'))
+    m = re.search(r'/@([^/?#]+)', d.get('author_url', ''))
+    return (m.group(1) if m else None), d.get('author_name', '')
+
 def est_un_short(vid):
     """/shorts/ID répond 200 pour un Short et redirige (303) pour une vidéo classique."""
     c = http.client.HTTPSConnection('www.youtube.com', timeout=30)
@@ -99,6 +105,12 @@ def main():
     for v in videos:
         v['format'] = 'v' if est_un_short(v['id']) else 'h'
         h = v.pop('handle') or ''
+        if not h or not v['nom']:  # la page de la playlist ne donne pas toujours la chaîne
+            try:
+                h2, nom = auteur(v['id'])
+                h, v['nom'] = h or h2 or '', v['nom'] or nom
+            except Exception as e:
+                print(f'auteur de {v["id"]} indisponible : {e}')
         v['chaine'] = f'https://www.youtube.com/@{h}' if h else ''
         if h and h not in avatars:
             try:

@@ -313,6 +313,16 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 .vtitle{display:block;margin:10px 2px 0;font-weight:700;font-size:.85rem;line-height:1.35;color:#fff;text-decoration:none;
   text-shadow:0 1px 2px #050a3a,0 0 8px #050a3a}
 .vtitle:hover{text-decoration:underline}
+/* aperçu de « Voir plus » : la suite se devine et s'estompe vers le bas */
+.more.apercu{max-height:400px;overflow:hidden;cursor:pointer;
+  -webkit-mask-image:linear-gradient(#000 30%,transparent 92%);mask-image:linear-gradient(#000 30%,transparent 92%)}
+.more.apercu>*{pointer-events:none}
+.more.apercu:hover{-webkit-mask-image:linear-gradient(#000 45%,transparent 100%);mask-image:linear-gradient(#000 45%,transparent 100%)}
+.more.apercu+.voirplus-wrap{position:relative;z-index:2;margin-top:-56px}
+.more.deplie{overflow:hidden;transition:max-height .6s cubic-bezier(.2,.8,.2,1)}
+.voirplus{animation:voirplusHalo 2.2s ease-in-out infinite}
+@keyframes voirplusHalo{50%{text-shadow:0 1px 2px #050a3a,0 0 22px #bfe6ff,0 0 8px #fff}}
+@media (prefers-reduced-motion:reduce){.voirplus{animation:none}}
 </style>
 <script>
 /* Mode léger : si le navigateur dessine sans carte graphique (WebGL absent ou logiciel),
@@ -359,7 +369,7 @@ if(lite)document.documentElement.classList.add('lite')})();
   <div class="latest">
     <h2>Ils m'ont fait confiance :</h2>
     <div class="vgrid" id="vgrid"></div>
-    <div class="more" id="more" hidden>
+    <div class="more" id="more">
       <h2>Encore plus de montages :</h2>
       <div class="vgrid" id="more-h"></div>
       <div class="more-grid" id="more-grid"></div>
@@ -605,7 +615,7 @@ function buildMore(){
   PLAYLIST.forEach(({id,format,chaine,nom,titre})=>{
     if(!id||deja.has(id))return;
     const vert=format==='v',handle=(chaine||'').split('@')[1]||'';
-    const c=CONFIANCE.find(x=>(x.chaine||'').toLowerCase()===(chaine||'').toLowerCase())||{avatar:PL_AVATARS[handle]};
+    const c=CONFIANCE.find(x=>chaine?(x.chaine||'').toLowerCase()===chaine.toLowerCase():x.nom===nom)||{avatar:PL_AVATARS[handle]};
     const d=document.createElement('div');d.className='vid'+(vert?' vert':'');
     d.innerHTML='<div class="avwrap"></div><div class="vt"><span></span></div><div class="wmp"><div class="vf"></div></div><a class="vtitle" target="_blank" rel="noopener"></a>';
     const av=d.querySelector('.avwrap');
@@ -660,7 +670,7 @@ function render(){
     else{vg.appendChild(a.d);i++}
   }
   vg.querySelectorAll('.vid').forEach(pop);
-  if(moreOuvert)buildMore();
+  buildMore();
 }
 
 /* ---------- Apparition « pop » au défilement ---------- */
@@ -732,15 +742,28 @@ document.getElementById('yt-non').addEventListener('click',()=>ytSet('0'));
 document.getElementById('cookies').addEventListener('click',()=>{document.getElementById('consent').hidden=false});
 if(ytChoix()===null)document.getElementById('consent').hidden=false;
 const voirplus=document.getElementById('voirplus'),more=document.getElementById('more');
+// fermé : aperçu qui s'estompe vers le bas (non cliquable à l'intérieur) ; ouvert : tout est visible
+function setApercu(on){
+  more.classList.toggle('apercu',on);
+  ['more-h','more-grid'].forEach(id=>{document.getElementById(id).inert=on});
+  voirplus.textContent=on?'Voir plus ▾':'Voir moins ▴';
+  voirplus.setAttribute('aria-expanded',!on);
+}
 voirplus.addEventListener('click',()=>{
-  moreOuvert=more.hidden;
-  if(moreOuvert){buildMore();chargerPlaylist().then(()=>{if(moreOuvert)buildMore()})}
-  else{const H=document.getElementById('more-h'),G=document.getElementById('more-grid');
-    wmpPlayers.forEach((e,f)=>{if(H.contains(f)||G.contains(f))wmpPlayers.delete(f)});H.innerHTML='';G.innerHTML=''}
-  more.hidden=!moreOuvert;
-  voirplus.textContent=moreOuvert?'Voir moins ▴':'Voir plus ▾';
-  voirplus.setAttribute('aria-expanded',moreOuvert);
+  moreOuvert=!moreOuvert;
+  if(moreOuvert){
+    const h0=more.offsetHeight;setApercu(false);
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const h1=more.scrollHeight;more.classList.add('deplie');more.style.maxHeight=h0+'px';void more.offsetHeight;more.style.maxHeight=h1+'px';
+    setTimeout(()=>{more.classList.remove('deplie');more.style.maxHeight=''},650);
+  }else{
+    buildMore();setApercu(true); // repart de zéro : arrête les vidéos en cours
+    more.scrollIntoView({block:'start',behavior:'smooth'});
+  }
 });
+more.addEventListener('click',()=>{if(!moreOuvert)voirplus.click()});
+setApercu(true);
+chargerPlaylist().then(buildMore);
 </script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
