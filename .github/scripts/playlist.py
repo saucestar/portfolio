@@ -4,7 +4,7 @@ Lancé par la GitHub Action .github/workflows/playlist.yml (aucune clé d'API :
 on lit la page publique de la playlist). Le site lit ensuite playlist.json,
 donc les visiteurs ne contactent pas YouTube pour ça.
 """
-import base64, json, re, sys, urllib.request, http.client
+import base64, json, os, re, sys, urllib.request, http.client
 from datetime import datetime, timezone
 
 PLAYLIST_ID = 'PLefpG9mfor5Q'
@@ -107,9 +107,12 @@ def main():
                 print(f'avatar de @{h} indisponible : {e}')
                 avatars[h] = anciens_avatars.get(h)
     nouveau = {'videos': videos, 'avatars': {k: v for k, v in avatars.items() if v}}
-    if {k: ancien.get(k) for k in nouveau} == nouveau:
+    force = os.environ.get('FORCE') == 'true'
+    if not force and {k: ancien.get(k) for k in nouveau} == nouveau:
         print('Playlist inchangée.')
         return
+    if force:
+        print('Mise à jour forcée.')
     nouveau['maj'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     with open(SORTIE, 'w', encoding='utf-8') as f:
         json.dump(nouveau, f, ensure_ascii=False, indent=1)
