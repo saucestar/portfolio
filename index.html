@@ -323,6 +323,20 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 .voirplus{animation:voirplusHalo 2.2s ease-in-out infinite}
 @keyframes voirplusHalo{50%{text-shadow:0 1px 2px #050a3a,0 0 22px #bfe6ff,0 0 8px #fff}}
 @media (prefers-reduced-motion:reduce){.voirplus{animation:none}}
+/* musique d'ambiance : bouton son flottant */
+.son{position:fixed;left:16px;bottom:16px;z-index:150;width:52px;height:52px;padding:0;border-radius:50%;border:1px solid #fff;cursor:pointer;
+  display:grid;place-items:center;color:#0b1240;
+  background:radial-gradient(circle at 35% 28%,#fff 0 12%,#d8ecff 35%,#8fc2ff 72%,#3d7bff);
+  box-shadow:0 0 0 2px #fff,0 6px 16px #050a3a66,inset 0 -6px 10px #1e5fd066;transition:transform .15s}
+.son:hover{transform:scale(1.07)}
+.son:active{transform:scale(.94)}
+.son:focus-visible{outline:3px solid #ffd23d;outline-offset:3px}
+.son svg{width:26px;height:26px;grid-area:1/1}
+.son .i-off,.son:not(.on) .i-on{display:none}
+.son:not(.on) .i-off{display:block}
+.son.joue{animation:sonPulse 1.8s ease-in-out infinite}
+@keyframes sonPulse{50%{box-shadow:0 0 0 2px #fff,0 6px 16px #050a3a66,inset 0 -6px 10px #1e5fd066,0 0 22px 6px #7fc4ffcc}}
+@media (prefers-reduced-motion:reduce){.son.joue{animation:none}}
 </style>
 <script>
 /* Mode léger : si le navigateur dessine sans carte graphique (WebGL absent ou logiciel),
@@ -440,7 +454,9 @@ if(lite)document.documentElement.classList.add('lite')})();
       <h2 style="margin-top:22px">Confidentialité et cookies</h2>
       <p>Ce site n'a ni formulaire, ni compte, ni publicité, ni mesure d'audience. Il ne dépose lui-même aucun cookie. Les polices sont hébergées sur le site.</p>
       <h3>Ce qui est stocké dans ton navigateur</h3>
-      <p>Uniquement ton choix concernant YouTube (« sauce_yt », dans le stockage local). Il ne quitte pas ton appareil et sert à ne pas te reposer la question.</p>
+      <p>Uniquement tes choix concernant YouTube (« sauce_yt ») et la musique (« sauce_son »), dans le stockage local. Ils ne quittent pas ton appareil et servent à ne pas te reposer la question.</p>
+      <h3>Musique d'ambiance</h3>
+      <p>Le fichier audio est hébergé sur le site : l'écouter n'envoie aucune donnée à un tiers. Le bouton en bas à gauche coupe ou relance la musique.</p>
       <h3>Services tiers</h3>
       <ul>
         <li><b>GitHub Pages</b> (hébergement) : comme tout hébergeur, il enregistre des journaux techniques (dont l'adresse IP) pour la sécurité du service. Base légale : intérêt légitime.</li>
@@ -461,6 +477,10 @@ if(lite)document.documentElement.classList.add('lite')})();
   <p><b>Vidéos YouTube</b> — Pour afficher les miniatures et lire les vidéos, ce site doit charger du contenu de YouTube (Google), qui peut alors collecter des données (adresse IP, cookies). Tu peux refuser : les vidéos se chargeront seulement si tu cliques sur ▶. <a href="#confidentialite">En savoir plus</a></p>
   <div class="btns"><button class="btn blue sm" type="button" id="yt-non">Refuser</button><button class="btn sm" type="button" id="yt-oui">Accepter</button></div>
 </div>
+<button class="son" id="son" type="button" aria-pressed="true" aria-label="Couper la musique" title="Couper la musique">
+  <svg class="i-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  <svg class="i-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+</button>
 <footer>© 2026 Sauce! ✭ — fait avec amour et beaucoup de bulles<br><a href="#confidentialite">Mentions légales &amp; confidentialité</a> · <button class="lnk" type="button" id="cookies">Gérer les cookies</button></footer>
 
 <script type="application/json" id="cfg">[
@@ -543,7 +563,7 @@ function wmpControls(wmp,vf,thumb,id,nom){
   stop.setAttribute('aria-label','Arrêter la vidéo de '+nom);
   wmp.append(play,stop);
   let f=null;
-  function etat(s){wmp.dataset.etat=s;play.setAttribute('aria-label',(s==='lecture'?'Mettre en pause':'Lire')+' la vidéo de '+nom)}
+  function etat(s){wmp.dataset.etat=s;play.setAttribute('aria-label',(s==='lecture'?'Mettre en pause':'Lire')+' la vidéo de '+nom);sonVideo()}
   etat('arret');
   function start(){
     wmpPlayers.forEach((e,autre)=>{ytCmd(autre,'pauseVideo');e('pause')}); // une seule vidéo à la fois
@@ -630,7 +650,33 @@ function buildMore(){
     wmpControls(d.querySelector('.wmp'),vf,btn,id,nom);
     (vert?G:H).appendChild(d);pop(d);
   });
+  sonVideo();
 }
+
+/* ---------- Musique d'ambiance (musique.mp3 en boucle) ---------- */
+// Les navigateurs bloquent le son tant que le visiteur n'a pas cliqué ou appuyé sur une touche :
+// la musique démarre donc à sa première interaction. Elle se coupe pendant qu'une vidéo joue.
+var son=null,sonVoulu=true,sonBloque=false,sonAnim=null;
+const SON_VOLUME=.3;
+function sonFondu(cible,fin){
+  clearInterval(sonAnim);
+  sonAnim=setInterval(()=>{
+    const d=cible-son.volume;
+    if(Math.abs(d)<=.03){son.volume=cible;clearInterval(sonAnim);if(fin)fin()}
+    else son.volume=Math.min(1,Math.max(0,son.volume+Math.sign(d)*.03));
+  },40);
+}
+function sonMaj(){
+  if(!son)return;
+  const btn=document.getElementById('son');
+  btn.classList.toggle('on',sonVoulu);btn.setAttribute('aria-pressed',sonVoulu);
+  const t=sonVoulu?'Couper la musique':'Activer la musique';btn.setAttribute('aria-label',t);btn.title=t;
+  if(sonVoulu&&!sonBloque&&!document.hidden){
+    if(son.paused)son.play().then(()=>{btn.classList.add('joue');sonFondu(SON_VOLUME)}).catch(()=>{});
+    else sonFondu(SON_VOLUME);
+  }else if(!son.paused)sonFondu(0,()=>{son.pause();btn.classList.remove('joue')});
+}
+function sonVideo(){sonBloque=[...document.querySelectorAll('.wmp')].some(w=>w.dataset.etat==='lecture');sonMaj()}
 
 function render(){
   renderMarquee();
@@ -764,6 +810,19 @@ voirplus.addEventListener('click',()=>{
 more.addEventListener('click',()=>{if(!moreOuvert)voirplus.click()});
 setApercu(true);
 chargerPlaylist().then(buildMore);
+son=new Audio('musique.mp3');son.loop=true;son.preload='none';son.volume=0;
+try{sonVoulu=localStorage.getItem('sauce_son')!=='0'}catch(e){}
+document.getElementById('son').addEventListener('click',()=>{
+  sonVoulu=!sonVoulu;try{localStorage.setItem('sauce_son',sonVoulu?'1':'0')}catch(e){}sonMaj();
+});
+// premier geste du visiteur (hors bouton son) : on peut enfin lancer la musique
+function sonGeste(e){
+  if(e.target.closest&&e.target.closest('#son'))return;
+  ['pointerdown','keydown'].forEach(t=>removeEventListener(t,sonGeste,true));sonMaj();
+}
+['pointerdown','keydown'].forEach(t=>addEventListener(t,sonGeste,true));
+document.addEventListener('visibilitychange',sonMaj);
+sonMaj();
 </script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
