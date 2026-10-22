@@ -353,10 +353,13 @@ html.entree-on .bar,html.entree-on main.wrap,html.entree-on footer,html.entree-o
 .entree-nom{font-family:'Quicksand',sans-serif;font-weight:700;font-size:clamp(2.4rem,8vw,4rem);line-height:1;text-shadow:0 4px 0 #0b1240,0 0 24px #3d7bff}
 .entree-txt{font-family:'Silkscreen',monospace;font-size:1rem;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 2px #050a3a,0 0 10px #050a3a;animation:entreeClign 1.4s ease-in-out infinite}
 @keyframes entreeClign{50%{opacity:.45}}
-.entree-son{margin-top:-12px;padding:7px 16px;border:1px solid #ffffffaa;border-radius:999px;background:#050a3a66;color:#fff;cursor:pointer;
-  font-family:'Silkscreen',monospace;font-size:.8rem;letter-spacing:.08em;text-shadow:0 1px 2px #050a3a;transition:background .2s,box-shadow .2s}
-.entree-son:hover,.entree-son:focus-visible{background:#050a3aaa;box-shadow:0 0 14px #7fc4ffaa;outline:none}
-.entree-son[aria-pressed="false"]{border-style:dashed;opacity:.8}
+.entree-cadre{display:flex;flex-direction:column;align-items:center;padding:6px 36px 24px;border:1px solid #ffffffaa;border-radius:28px;
+  background:#050a3a66;box-shadow:0 14px 40px #050a3a55,inset 0 1px 0 #ffffff55;backdrop-filter:blur(6px)}
+.lite .entree-cadre{backdrop-filter:none;background:#050a3aaa}
+.entree-son{margin-top:-14px;padding:6px 12px;border:0;border-radius:999px;background:none;color:#fff;cursor:pointer;
+  font-family:'Silkscreen',monospace;font-size:.8rem;letter-spacing:.08em;text-shadow:0 1px 2px #050a3a;transition:text-shadow .2s,background .2s}
+.entree-son:hover,.entree-son:focus-visible{background:#ffffff1a;text-shadow:0 1px 2px #050a3a,0 0 12px #bfe6ff;outline:none}
+.entree-son[aria-pressed="false"]{opacity:.75}
 @media (prefers-reduced-motion:reduce){.entree-orb,.entree-txt{animation:none}.entree{transition:none}}
 </style>
 <script>
@@ -371,12 +374,14 @@ if(lite)document.documentElement.classList.add('lite')})();
 </head>
 <body data-page="accueil">
 <div class="entree" id="entree">
+  <div class="entree-cadre">
   <button class="entree-btn" type="button" aria-label="Entrer sur le site">
     <span class="entree-orb" aria-hidden="true"></span>
     <span class="entree-nom">Sauce! ✭</span>
     <span class="entree-txt">Cliquer pour entrer</span>
   </button>
   <button class="entree-son" type="button" aria-pressed="true" title="Cliquer pour entrer sans musique">♪ avec le son</button>
+  </div>
 </div>
 <script>
 // écran d'entrée : sert à lancer la musique (le navigateur exige un clic). Inutile si le son a été coupé.
