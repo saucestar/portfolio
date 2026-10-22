@@ -337,6 +337,28 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 .son.joue{animation:sonPulse 1.8s ease-in-out infinite}
 @keyframes sonPulse{50%{box-shadow:0 0 0 2px #fff,0 6px 16px #050a3a66,inset 0 -6px 10px #1e5fd066,0 0 22px 6px #7fc4ffcc}}
 @media (prefers-reduced-motion:reduce){.son.joue{animation:none}}
+/* écran d'entrée façon démarrage Windows */
+html.entree-on{overflow:hidden}
+.entree{position:fixed;inset:0;z-index:500;display:grid;place-items:center;color:#fff;cursor:pointer;
+  background:radial-gradient(circle at 50% 42%,#2f5fe0 0,#13226e 45%,#050a3a 80%);transition:opacity .6s ease,visibility .6s}
+.entree.sort{opacity:0;visibility:hidden}
+.entree-btn{display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px;background:none;border:0;color:inherit;font:inherit;cursor:pointer}
+.entree-btn:focus-visible{outline:3px solid #ffd23d;outline-offset:6px;border-radius:20px}
+.entree-orb{width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(circle at 35% 28%,#fff 0 12%,#c8f58a 22%,var(--lime) 55%,var(--lime2));
+  box-shadow:0 0 0 3px #fff,0 8px 24px #0008,inset 0 -12px 20px #2d6a0a88;animation:entreeOrb 1.8s ease-in-out infinite}
+@keyframes entreeOrb{50%{box-shadow:0 0 0 3px #fff,0 8px 24px #0008,inset 0 -12px 20px #2d6a0a88,0 0 40px 12px #8fd23acc}}
+.entree-nom{font-family:'Quicksand',sans-serif;font-weight:700;font-size:clamp(2.4rem,8vw,4rem);line-height:1;text-shadow:0 4px 0 #0b1240,0 0 24px #3d7bff}
+.entree-barre{position:relative;width:190px;height:16px;border:2px solid #9cc4f0;border-radius:5px;overflow:hidden;background:#050a3a}
+.entree-barre i{position:absolute;top:2px;bottom:2px;width:10px;border-radius:2px;background:linear-gradient(#bfe0ff,#3d7bff 60%,#1e4fbf);
+  animation:entreeBoot 1.6s linear infinite}
+.entree-barre i:nth-child(2){animation-delay:.12s}
+.entree-barre i:nth-child(3){animation-delay:.24s}
+@keyframes entreeBoot{from{left:-34px}to{left:200px}}
+.entree-txt{font-family:'Silkscreen',monospace;font-size:1rem;letter-spacing:.1em;text-transform:uppercase;animation:entreeClign 1.4s ease-in-out infinite}
+@keyframes entreeClign{50%{opacity:.45}}
+.entree-son{font-family:'Silkscreen',monospace;font-size:.75rem;letter-spacing:.08em;opacity:.7}
+@media (prefers-reduced-motion:reduce){.entree-orb,.entree-barre i,.entree-txt{animation:none}.entree{transition:none}}
 </style>
 <script>
 /* Mode léger : si le navigateur dessine sans carte graphique (WebGL absent ou logiciel),
@@ -349,6 +371,21 @@ if(lite)document.documentElement.classList.add('lite')})();
 </script>
 </head>
 <body data-page="accueil">
+<div class="entree" id="entree">
+  <button class="entree-btn" type="button" aria-label="Entrer sur le site (lance la musique)">
+    <span class="entree-orb" aria-hidden="true"></span>
+    <span class="entree-nom">Sauce! ✭</span>
+    <span class="entree-barre" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="entree-txt">Cliquer pour entrer</span>
+    <span class="entree-son">♪ avec le son</span>
+  </button>
+</div>
+<script>
+// écran d'entrée : sert à lancer la musique (le navigateur exige un clic). Inutile si le son a été coupé.
+try{if(localStorage.getItem('sauce_son')==='0')document.getElementById('entree').remove()}catch(e){}
+window.entreeAttente=document.getElementById('entree')?[]:null;
+if(window.entreeAttente)document.documentElement.classList.add('entree-on');
+</script>
 <div class="stars" aria-hidden="true"><div class="damier"></div><svg class="s1" viewBox="-100 -100 200 200"><polygon points="0.0,-100.0 24.7,-34.0 95.1,-30.9 39.9,13.0 58.8,80.9 0.0,42.0 -58.8,80.9 -39.9,13.0 -95.1,-30.9 -24.7,-34.0"/></svg><svg class="s2" viewBox="-100 -100 200 200"><polygon points="0.0,-100.0 24.7,-34.0 95.1,-30.9 39.9,13.0 58.8,80.9 0.0,42.0 -58.8,80.9 -39.9,13.0 -95.1,-30.9 -24.7,-34.0"/></svg></div>
 
 <header class="bar">
@@ -724,7 +761,7 @@ var popIO;
 function pop(el){
   if(!('IntersectionObserver' in window)||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   popIO=popIO||new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vu');popIO.unobserve(e.target)}}),{rootMargin:'0px 0px -8% 0px'});
-  el.classList.add('pop');popIO.observe(el);
+  el.classList.add('pop');if(window.entreeAttente)entreeAttente.push(el);else popIO.observe(el);
 }
 document.querySelectorAll('.hero>*,.latest>h2,#apropos .chrome,#contact .win').forEach(pop);
 render();
@@ -823,6 +860,20 @@ function sonGeste(e){
 ['pointerdown','touchend','click','keydown'].forEach(t=>addEventListener(t,sonGeste,true));
 document.addEventListener('visibilitychange',sonMaj);
 sonMaj();
+const entree=document.getElementById('entree');
+if(entree){
+  const entrer=()=>{
+    if(entree.classList.contains('sort'))return;
+    entree.classList.add('sort');document.documentElement.classList.remove('entree-on');
+    sonMaj(); // le clic autorise enfin le son
+    const l=window.entreeAttente;window.entreeAttente=null;
+    if(l&&popIO)l.forEach(e=>popIO.observe(e)); // les éléments de l'accueil « popent » maintenant
+    setTimeout(()=>entree.remove(),650);
+  };
+  entree.addEventListener('click',entrer);
+  addEventListener('keydown',e=>{if(!e.ctrlKey&&!e.altKey&&!e.metaKey)entrer()});
+  entree.querySelector('button').focus({preventScroll:true});
+}
 </script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
