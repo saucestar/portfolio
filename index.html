@@ -339,7 +339,7 @@ footer{text-align:center;padding:30px 16px 40px;font-size:.85rem;color:#fff;text
 @media (prefers-reduced-motion:reduce){.son.joue{animation:none}}
 /* écran d'entrée façon démarrage Windows */
 html.entree-on{overflow:hidden}
-.entree{position:fixed;inset:0;z-index:500;display:grid;place-items:center;color:#fff;cursor:pointer;background:transparent;transition:opacity .6s ease,visibility .6s}
+.entree{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;cursor:pointer;background:transparent;transition:opacity .6s ease,visibility .6s}
 /* fond transparent : on voit le damier et les étoiles ; le contenu du site attend l'entrée */
 .bar,main.wrap,footer,.son,.consent{transition:opacity .6s ease}
 html.entree-on .bar,html.entree-on main.wrap,html.entree-on footer,html.entree-on .son,html.entree-on .consent{opacity:0}
@@ -351,16 +351,13 @@ html.entree-on .bar,html.entree-on main.wrap,html.entree-on footer,html.entree-o
   box-shadow:0 0 0 3px #fff,0 8px 24px #0008,inset 0 -12px 20px #2d6a0a88;animation:entreeOrb 1.8s ease-in-out infinite}
 @keyframes entreeOrb{50%{box-shadow:0 0 0 3px #fff,0 8px 24px #0008,inset 0 -12px 20px #2d6a0a88,0 0 40px 12px #8fd23acc}}
 .entree-nom{font-family:'Quicksand',sans-serif;font-weight:700;font-size:clamp(2.4rem,8vw,4rem);line-height:1;text-shadow:0 4px 0 #0b1240,0 0 24px #3d7bff}
-.entree-barre{position:relative;width:190px;height:16px;border:2px solid #9cc4f0;border-radius:5px;overflow:hidden;background:#050a3a}
-.entree-barre i{position:absolute;top:2px;bottom:2px;width:10px;border-radius:2px;background:linear-gradient(#bfe0ff,#3d7bff 60%,#1e4fbf);
-  animation:entreeBoot 1.6s linear infinite}
-.entree-barre i:nth-child(2){animation-delay:.12s}
-.entree-barre i:nth-child(3){animation-delay:.24s}
-@keyframes entreeBoot{from{left:-34px}to{left:200px}}
 .entree-txt{font-family:'Silkscreen',monospace;font-size:1rem;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 2px #050a3a,0 0 10px #050a3a;animation:entreeClign 1.4s ease-in-out infinite}
 @keyframes entreeClign{50%{opacity:.45}}
-.entree-son{font-family:'Silkscreen',monospace;font-size:.75rem;letter-spacing:.08em;opacity:.85;text-shadow:0 1px 2px #050a3a,0 0 10px #050a3a}
-@media (prefers-reduced-motion:reduce){.entree-orb,.entree-barre i,.entree-txt{animation:none}.entree{transition:none}}
+.entree-son{margin-top:-12px;padding:7px 16px;border:1px solid #ffffffaa;border-radius:999px;background:#050a3a66;color:#fff;cursor:pointer;
+  font-family:'Silkscreen',monospace;font-size:.8rem;letter-spacing:.08em;text-shadow:0 1px 2px #050a3a;transition:background .2s,box-shadow .2s}
+.entree-son:hover,.entree-son:focus-visible{background:#050a3aaa;box-shadow:0 0 14px #7fc4ffaa;outline:none}
+.entree-son[aria-pressed="false"]{border-style:dashed;opacity:.8}
+@media (prefers-reduced-motion:reduce){.entree-orb,.entree-txt{animation:none}.entree{transition:none}}
 </style>
 <script>
 /* Mode léger : si le navigateur dessine sans carte graphique (WebGL absent ou logiciel),
@@ -374,13 +371,12 @@ if(lite)document.documentElement.classList.add('lite')})();
 </head>
 <body data-page="accueil">
 <div class="entree" id="entree">
-  <button class="entree-btn" type="button" aria-label="Entrer sur le site (lance la musique)">
+  <button class="entree-btn" type="button" aria-label="Entrer sur le site">
     <span class="entree-orb" aria-hidden="true"></span>
     <span class="entree-nom">Sauce! ✭</span>
-    <span class="entree-barre" aria-hidden="true"><i></i><i></i><i></i></span>
     <span class="entree-txt">Cliquer pour entrer</span>
-    <span class="entree-son">♪ avec le son</span>
   </button>
+  <button class="entree-son" type="button" aria-pressed="true" title="Cliquer pour entrer sans musique">♪ avec le son</button>
 </div>
 <script>
 // écran d'entrée : sert à lancer la musique (le navigateur exige un clic). Inutile si le son a été coupé.
@@ -856,7 +852,7 @@ document.getElementById('son').addEventListener('click',()=>{
 });
 // premier geste du visiteur (hors bouton son) : on peut enfin lancer la musique
 function sonGeste(e){
-  if(e.target.closest&&e.target.closest('#son'))return;
+  if(e.target.closest&&e.target.closest('#son,.entree-son'))return;
   ['pointerdown','touchend','click','keydown'].forEach(t=>removeEventListener(t,sonGeste,true));sonMaj();
 }
 ['pointerdown','touchend','click','keydown'].forEach(t=>addEventListener(t,sonGeste,true));
@@ -873,8 +869,19 @@ if(entree){
     setTimeout(()=>entree.remove(),650);
   };
   entree.addEventListener('click',entrer);
-  addEventListener('keydown',e=>{if(!e.ctrlKey&&!e.altKey&&!e.metaKey)entrer()});
-  entree.querySelector('button').focus({preventScroll:true});
+  addEventListener('keydown',e=>{if(!e.ctrlKey&&!e.altKey&&!e.metaKey&&!(e.target.closest&&e.target.closest('.entree-son')))entrer()});
+  const sonTxt=entree.querySelector('.entree-son');
+  const majSonTxt=()=>{
+    sonTxt.textContent=sonVoulu?'♪ avec le son':'✕ sans le son';sonTxt.setAttribute('aria-pressed',sonVoulu);
+    sonTxt.title=sonVoulu?'Cliquer pour entrer sans musique':'Cliquer pour réactiver la musique';
+  };
+  sonTxt.addEventListener('click',e=>{
+    e.stopPropagation(); // ne fait pas entrer sur le site
+    sonVoulu=!sonVoulu;try{localStorage.setItem('sauce_son',sonVoulu?'1':'0')}catch(err){}
+    majSonTxt();sonMaj();
+  });
+  majSonTxt();
+  entree.querySelector('.entree-btn').focus({preventScroll:true});
 }
 </script>
 <script type="module">
